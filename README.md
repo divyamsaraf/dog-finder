@@ -1,54 +1,135 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# 🐾 Fetch Dog Finder
 
-Currently, two official plugins are available:
+A modern web application for finding adoptable dogs, built with React, TypeScript, and Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Dog Finder Screenshot](https://via.placeholder.com/800x450?text=Dog+Finder+App)
 
-## Expanding the ESLint configuration
+## 🚀 Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Search & Filter**: Find dogs by breed, age range, and location
+- **Advanced Sorting**: Sort results by breed, name, age, or location
+- **Favorites**: Save dogs you're interested in for later viewing
+- **Match Generation**: Get matched with a dog based on your favorites
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **API Status Monitoring**: Check the availability of the backend service
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## 🛠️ Tech Stack
+
+- **Frontend Framework**: React 19
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Routing**: React Router v7
+- **State Management**: Zustand
+- **UI Components**: Custom components with React Select for advanced inputs
+- **HTTP Client**: Axios
+- **Development**: ESLint for code quality
+
+## 🏗️ Project Structure
+
+```
+fetch-dog-finder/
+├── src/
+│   ├── components/       # Reusable UI components
+│   ├── pages/            # Page components (Login, Search, Favorites)
+│   ├── services/         # API service functions
+│   ├── store/            # Zustand state management
+│   ├── types/            # TypeScript type definitions
+│   ├── App.tsx           # Main application component
+│   └── main.tsx          # Application entry point
+├── public/               # Static assets
+└── [config files]        # Configuration files
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚦 Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+- Node.js 18+ and npm
+
+### Installation
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/fetch-dog-finder.git
+   cd fetch-dog-finder
+   ```
+
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+
+3. Start the development server
+   ```bash
+   npm run dev
+   ```
+
+4. Open your browser to `https://localhost:5173`
+
+## 🔧 Available Scripts
+
+- `npm run dev` - Start the development server
+- `npm run build` - Build the app for production
+- `npm run lint` - Run ESLint to check code quality
+- `npm run preview` - Preview the production build locally
+
+## 🧪 Testing
+
+The project uses Vitest, React Testing Library, and Jest DOM for testing:
+
+```bash
+# Run tests
+npm test
 ```
+
+## 📱 API Integration
+
+The application integrates with the Fetch API service:
+- Base URL: `https://frontend-take-home-service.fetch.com`
+- Authentication: Cookie-based
+- Endpoints:
+  - `/dogs/breeds` - Get all dog breeds
+  - `/dogs/search` - Search for dogs with filters
+  - `/dogs` - Get dogs by ID
+  - `/dogs/match` - Generate a match based on favorites
+
+## 🔒 Security Features
+
+- HTTPS development server with local certificates
+- Secure cookie handling for authentication
+- API availability monitoring
+
+## 🧩 Key Components
+
+### Pages
+- **LoginPage**: User authentication
+- **SearchPage**: Main search interface with filters
+- **FavoritesPage**: View and manage favorite dogs
+- **ApiStatusPage**: Check API service status
+
+### State Management
+- **useFavorites**: Zustand store for managing favorite dogs
+
+## 👨‍💻 For Reviewers
+
+### Code Quality
+- TypeScript is used throughout with strict type checking
+- ESLint is configured for code quality
+- Component structure follows React best practices
+
+### Performance Considerations
+- Pagination for dog search results
+- Efficient state management with Zustand
+- Optimized rendering with proper React patterns
+
+### Future Improvements
+- Add comprehensive test coverage
+- Implement more advanced filtering options
+- Add user profiles and saved searches
+- Improve accessibility features
+- Add offline support with service workers
+
+## 📄 License
+
+[MIT](LICENSE)
