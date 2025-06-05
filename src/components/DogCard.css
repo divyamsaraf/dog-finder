@@ -1,0 +1,31 @@
+.dog-card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  width: 200px;
+  text-align: center;
+  position: relative;
+}
+
+.dog-card-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.favorite-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ccc;
+  z-index: 10;
+}
+
+.favorite-button.favorited {
+  color: gold;
+}
