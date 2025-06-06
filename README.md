@@ -4,6 +4,7 @@
 A modern web application for finding adoptable dogs, built with React, TypeScript, and Vite.
 
 🌐 Live Demo: https://dog-finder-app-six.vercel.app
+
 📂 GitHub Repository: https://github.com/divyamsaraf/dog-finder.git
 
 ## 🚀 Features
