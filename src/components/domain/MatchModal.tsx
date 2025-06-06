@@ -55,7 +55,7 @@ const MatchModal: React.FC<MatchModalProps> = ({ matchedDog, onClose }) => {
         <button
           onClick={() => {
             if (!isFavorite(matchedDog.id)) {
-              addFavorite(matchedDog.id);
+              addFavorite(matchedDog);
             }
           }}
           disabled={isFavorite(matchedDog.id)}

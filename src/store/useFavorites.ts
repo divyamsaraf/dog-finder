@@ -7,11 +7,12 @@ interface FavoritesState {
   addFavorite: (dog: Dog) => void;
   removeFavorite: (id: string) => void;
   clearFavorites: () => void;
+  isFavorite: (id: string) => boolean;
 }
 
 export const useFavorites = create<FavoritesState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       favorites: [],
       addFavorite: (dog) => 
         set((state) => ({
@@ -24,7 +25,9 @@ export const useFavorites = create<FavoritesState>()(
           favorites: state.favorites.filter(dog => dog.id !== id)
         })),
       clearFavorites: () => 
-        set({ favorites: [] })
+        set({ favorites: [] }),
+      isFavorite: (id) => 
+        get().favorites.some(dog => dog.id === id)
     }),
     {
       name: 'dog-favorites-storage',

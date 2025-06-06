@@ -188,12 +188,13 @@ export const generateRandomMatch = async (): Promise<string> => {
 };
 
 // API status
-// export const checkApiStatus = async (): Promise<boolean> => {
-//   try {
-//     await api.get('/');
-//     return true;
-//   } catch (error) {
-//     console.error('API is not available:', error);
-//     return false;
-//   }
-// };
+export const checkApiStatus = async (): Promise<boolean> => {
+  try {
+    // We'll use the breeds endpoint to check API status
+    const response = await api.get('/dogs/breeds');
+    return response.status === 200;
+  } catch (error) {
+    console.error('API is not available:', error);
+    return false;
+  }
+};
