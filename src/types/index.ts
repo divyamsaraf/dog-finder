@@ -1,10 +1,11 @@
+// Dog related types
 export interface Dog {
   id: string;
+  img: string;
   name: string;
-  breed: string;
   age: number;
   zip_code: string;
-  img: string;
+  breed: string;
 }
 
 export interface SearchParams {
@@ -14,10 +15,18 @@ export interface SearchParams {
   ageMax?: number;
   size?: number;
   from?: number;
-  sort?: string;
-  sortField?: string; // Add this field to support specifying which field to sort by
+  sort?: string; // Direction (asc or desc)
+  sortField?: string; // Field to sort by
 }
 
+export interface SearchResult {
+  resultIds: string[];
+  total: number;
+  next?: string;
+  prev?: string;
+}
+
+// Location related types
 export interface Location {
   zip_code: string;
   latitude: number;
@@ -27,8 +36,25 @@ export interface Location {
   county: string;
 }
 
+// Authentication related types
+export interface User {
+  name: string;
+  email: string;
+}
+
+// API response types
 export interface Match {
   match: string;
+}
+
+// State types
+export interface FavoritesState {
+  favorites: string[];
+  addFavorite: (id: string) => void;
+  removeFavorite: (id: string) => void;
+  toggleFavorite: (id: string) => void;
+  clearFavorites: () => void;
+  isFavorite: (id: string) => boolean;
 }
 
 export const API_BASE = "https://frontend-take-home-service.fetch.com";

@@ -1,8 +1,10 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
+import theme from './theme';
 import './index.css';
-import './transitions.css';
 
 // Create a root element
 const rootElement = document.getElementById('root');
@@ -15,9 +17,12 @@ if (!rootElement) {
 // Create a root
 const root = createRoot(rootElement);
 
-// Render with BrowserRouter to provide routing context
+// Render with ThemeProvider and BrowserRouter
 root.render(
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </ThemeProvider>
 );

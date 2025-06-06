@@ -1,38 +1,30 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { Dog } from '../types';
 
 interface FavoritesState {
-  favorites: string[];
-  addFavorite: (dogId: string) => void;
-  removeFavorite: (dogId: string) => void;
+  favorites: Dog[];
+  addFavorite: (dog: Dog) => void;
+  removeFavorite: (id: string) => void;
   clearFavorites: () => void;
-  isFavorited: (dogId: string) => boolean;
 }
 
 export const useFavorites = create<FavoritesState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       favorites: [],
-      
-      addFavorite: (dogId: string) => {
-        const { favorites } = get();
-        if (!favorites.includes(dogId)) {
-          set({ favorites: [...favorites, dogId] });
-        }
-      },
-      
-      removeFavorite: (dogId: string) => {
-        const { favorites } = get();
-        set({ favorites: favorites.filter(id => id !== dogId) });
-      },
-      
-      clearFavorites: () => {
-        set({ favorites: [] });
-      },
-      
-      isFavorited: (dogId: string) => {
-        return get().favorites.includes(dogId);
-      },
+      addFavorite: (dog) => 
+        set((state) => ({
+          favorites: state.favorites.some(fav => fav.id === dog.id) 
+            ? state.favorites 
+            : [...state.favorites, dog]
+        })),
+      removeFavorite: (id) => 
+        set((state) => ({
+          favorites: state.favorites.filter(dog => dog.id !== id)
+        })),
+      clearFavorites: () => 
+        set({ favorites: [] })
     }),
     {
       name: 'dog-favorites-storage',

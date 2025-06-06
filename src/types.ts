@@ -1,6 +1,6 @@
 export interface Dog {
   id: string;
-  img: string;
+  img?: string; // Make img optional with the ? modifier
   name: string;
   age: number;
   zip_code: string;

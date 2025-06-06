@@ -1,839 +1,432 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { DogCard, THEME } from '../App';
-import { Dog, SearchParams, API_BASE } from '../types';
-import Select from 'react-select';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Paper, 
+  Alert, 
+  Button, 
+  CircularProgress,
+  Pagination,
+  Fab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
+import PetsIcon from '@mui/icons-material/Pets';
+import DogCard from '../components/domain/DogCard';
+import Filters from '../components/Filters';
+import { Dog, SearchParams } from '../types';
 import { useFavorites } from '../store/useFavorites';
 import { 
   fetchBreeds, 
-  fetchDogs, 
-  isApiAvailable as checkApiAvailability,
+  searchDogs,
   fetchDogsByIds,
-  fetchMatch
+  generateMatch,
+  generateRandomMatch
 } from '../services/api';
+import { getRandomDogQuote } from '../utils/dogQuotes';
+import MatchedDogDialog from '../components/domain/MatchedDogDialog';
 
 export const SearchPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
+  const { favorites, addFavorite, removeFavorite } = useFavorites();
+  const theme = useTheme();
   
+  // State for dogs and search
   const [dogs, setDogs] = useState<Dog[]>([]);
   const [breeds, setBreeds] = useState<string[]>([]);
-  const [selectedBreeds, setSelectedBreeds] = useState<string[]>(
-    queryParams.getAll('breed') || []
-  );
-  const [zipCode, setZipCode] = useState<string>(
-    queryParams.get('zipCode') || ''
-  );
-  const [ageMin, setAgeMin] = useState<number | undefined>(
-    queryParams.get('ageMin') ? Number(queryParams.get('ageMin')) : undefined
-  );
-  const [ageMax, setAgeMax] = useState<number | undefined>(
-    queryParams.get('ageMax') ? Number(queryParams.get('ageMax')) : undefined
-  );
-  const [page, setPage] = useState(
-    queryParams.get('page') ? Number(queryParams.get('page')) : 0
-  );
-  const [sortField, setSortField] = useState<string>('breed');
-  const [sortOrder, setSortOrder] = useState<string>('asc');
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
-  const [showMatchModal, setShowMatchModal] = useState(false);
-  const [apiAvailable, setApiAvailable] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [isApiAvailable, setIsApiAvailable] = useState<boolean>(true);
   
-  const { favorites, addFavorite, removeFavorite, isFavorited } = useFavorites();
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 20;
+  
+  // Filter state
+  const [selectedBreeds, setSelectedBreeds] = useState<string[]>([]);
+  const [zipCodes, setZipCodes] = useState<string[]>([]);
+  const [ageRange, setAgeRange] = useState<[number, number]>([0, 20]);
+  
+  // Match dialog state
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
 
-  const pageSize = 12;
+  // Add these state variables
+  const [sortField, setSortField] = useState<string>('breed');
+  const [sortDirection, setSortDirection] = useState<string>('asc');
 
-  // Update URL when filters change
+  // Add a new state for random match loading
+  const [randomMatchLoading, setRandomMatchLoading] = useState(false);
+
   useEffect(() => {
-    const params = new URLSearchParams();
-    
-    selectedBreeds.forEach(breed => params.append('breed', breed));
-    if (zipCode) params.set('zipCode', zipCode);
-    if (ageMin !== undefined) params.set('ageMin', ageMin.toString());
-    if (ageMax !== undefined) params.set('ageMax', ageMax.toString());
-    if (page > 0) params.set('page', page.toString());
-    params.set('sort', sortOrder);
-    params.set('sortField', sortField);
-    
-    navigate({ search: params.toString() }, { replace: true });
-  }, [selectedBreeds, zipCode, ageMin, ageMax, page, sortOrder, sortField, navigate]);
-
-  useEffect(() => {
-    async function checkApiStatus() {
+    const loadInitialData = async () => {
       try {
-        const available = await checkApiAvailability();
-        setApiAvailable(available);
-        
-        if (!available) {
-          console.warn('API is not available. Using mock data.');
-          setApiError("The API service appears to be unavailable. Showing mock data for demonstration purposes.");
-        } else {
-          // If API is available but we're getting 401 errors, we need to redirect to login
-          const authResponse = await fetch(`${API_BASE}/dogs/breeds`, {
-            credentials: 'include',
-            headers: {
-              'Cache-Control': 'no-cache'
-            }
-          });
-          
-          if (authResponse.status === 401) {
-            console.warn('Authentication required. Redirecting to login.');
-            navigate('/login');
-          }
-        }
-      } catch (error) {
-        console.error('API status check failed:', error);
-        setApiAvailable(false);
-        setApiError("Failed to connect to the API. Showing mock data for demonstration purposes.");
-      }
-    }
-    checkApiStatus();
-  }, [navigate]);
-
-  useEffect(() => {
-    async function loadBreeds() {
-      try {
-        setLoading(true);
-        if (!apiAvailable) {
-          // Use mock breeds if API is not available
-          setBreeds(['Golden Retriever', 'German Shepherd', 'Labrador', 'Poodle', 'Bulldog'].sort());
-          return;
-        }
-        
-        const breedList = await fetchBreeds();
-        setBreeds(breedList.sort((a: string, b: string) => a.localeCompare(b)));
-      } catch (error) {
-        console.error('Error loading breeds:', error);
-        if (error instanceof Error && error.message.includes('401')) {
-          localStorage.removeItem("dog_finder_auth");
+        const breedsData = await fetchBreeds();
+        setBreeds(breedsData);
+        await loadDogs();
+      } catch (error: any) {
+        // If we get a 401, we're not authenticated
+        if (error.response && error.response.status === 401) {
           navigate('/login');
         } else {
-          // Use mock breeds if there's an error
-          setBreeds(['Golden Retriever', 'German Shepherd', 'Labrador', 'Poodle', 'Bulldog'].sort());
+          setApiError('Failed to connect to the API. Please check your connection.');
         }
       } finally {
         setLoading(false);
       }
-    }
-    loadBreeds();
-  }, [navigate, apiAvailable]);
-
-  // Define loadDogs outside useEffect so it can be called from elsewhere
-  const loadDogs = async () => {
-    if (loading) return;
+    };
     
+    loadInitialData();
+  }, [navigate]);
+
+  const loadDogs = async (page = 1) => {
     setLoading(true);
     setApiError(null);
     
     try {
-      // First check if API is available
-      const apiAvailable = await checkApiAvailability();
-      setIsApiAvailable(apiAvailable);
-      
-      if (!apiAvailable) {
-        setApiError("The API service appears to be unavailable. Showing mock data for demonstration purposes.");
-        // Load mock data
-        setDogs([
-          {
-            id: 'mock1',
-            name: 'Buddy',
-            breed: 'Golden Retriever',
-            age: 3,
-            zip_code: '10001',
-            img: 'https://images.dog.ceo/breeds/retriever-golden/n02099601_1722.jpg'
-          },
-          {
-            id: 'mock2',
-            name: 'Max',
-            breed: 'German Shepherd',
-            age: 2,
-            zip_code: '10002',
-            img: 'https://images.dog.ceo/breeds/germanshepherd/n02106662_23163.jpg'
-          },
-          {
-            id: 'mock3',
-            name: 'Bella',
-            breed: 'Labrador',
-            age: 4,
-            zip_code: '10003',
-            img: 'https://images.dog.ceo/breeds/labrador/n02099712_1030.jpg'
-          }
-        ]);
-        setTotal(3);
-        return;
-      }
-      
-      // Prepare search parameters
       const searchParams: SearchParams = {
         breeds: selectedBreeds.length > 0 ? selectedBreeds : undefined,
-        zipCodes: zipCode ? [zipCode] : undefined,
-        ageMin: ageMin,
-        ageMax: ageMax,
+        zipCodes: zipCodes.length > 0 ? zipCodes : undefined,
+        ageMin: ageRange[0],
+        ageMax: ageRange[1],
         size: pageSize,
-        from: page * pageSize,
-        sort: sortOrder,
+        from: (page - 1) * pageSize,
+        sort: sortDirection,
         sortField: sortField
       };
       
-      try {
-        console.log("Searching with params:", searchParams);
-        const { dogs: dogData, total: totalDogs } = await fetchDogs(searchParams);
-        setDogs(dogData);
-        setTotal(totalDogs);
-      } catch (error) {
-        console.error('Error loading dogs:', error);
-        
-        // Check if it's an authentication error
-        if (error instanceof Error && error.message.includes('401')) {
-          localStorage.removeItem("dog_finder_auth");
-          navigate('/login');
-        } else {
-          // Show a user-friendly error message
-          setApiError('Unable to fetch dogs. The API might be temporarily unavailable.');
-          // Load mock data as fallback
-          setDogs([
-            {
-              id: 'mock1',
-              name: 'Buddy',
-              breed: 'Golden Retriever',
-              age: 3,
-              zip_code: '10001',
-              img: 'https://images.dog.ceo/breeds/retriever-golden/n02099601_1722.jpg'
-            },
-            {
-              id: 'mock2',
-              name: 'Max',
-              breed: 'German Shepherd',
-              age: 2,
-              zip_code: '10002',
-              img: 'https://images.dog.ceo/breeds/germanshepherd/n02106662_23163.jpg'
-            },
-            {
-              id: 'mock3',
-              name: 'Bella',
-              breed: 'Labrador',
-              age: 4,
-              zip_code: '10003',
-              img: 'https://images.dog.ceo/breeds/labrador/n02099712_1030.jpg'
-            }
-          ]);
-          setTotal(3);
-        }
-      }
+      const searchResult = await searchDogs(searchParams);
+      const dogsData = await fetchDogsByIds(searchResult.resultIds);
+      
+      setDogs(dogsData);
+      setTotalPages(Math.ceil(searchResult.total / pageSize));
+      setCurrentPage(page);
+    } catch (error) {
+      setApiError('Failed to fetch dogs. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Then in useEffect, just call the function
-  useEffect(() => {
-    loadDogs();
-  }, [selectedBreeds, zipCode, ageMin, ageMax, page, sortOrder, sortField]);
+  const handleSearch = () => {
+    setCurrentPage(1);
+    loadDogs(1);
+  };
 
-  const toggleFavorite = (dogId: string) => {
-    if (isFavorited(dogId)) {
-      removeFavorite(dogId);
+  const handlePageChange = (_: React.ChangeEvent<unknown>, page: number) => {
+    setCurrentPage(page);
+    loadDogs(page);
+  };
+
+  const handleToggleFavorite = (dog: Dog) => {
+    const isFavorite = favorites.some(fav => fav.id === dog.id);
+    if (isFavorite) {
+      removeFavorite(dog.id);
     } else {
-      addFavorite(dogId);
+      addFavorite(dog);
     }
   };
 
-  const generateMatch = async () => {
+  const handleGenerateMatch = async () => {
     if (favorites.length === 0) {
-      alert('Please add some favorite dogs first!');
+      setApiError('Please add some dogs to your favorites first');
       return;
     }
     
+    setMatchLoading(true);
+    setMatchDialogOpen(true);
+    
     try {
-      setLoading(true);
+      const matchId = await generateMatch(favorites.map(dog => dog.id));
+      const matchedDogs = await fetchDogsByIds([matchId]);
       
-      // Request a match
-      const matchId = await fetchMatch(favorites);
+      // Create a safe version of the dog that's definitely not undefined
+      let dogToSet: Dog | null = null;
       
-      if (matchId) {
-        // Get the matched dog details
-        const matchedDogData = await fetchDogsByIds([matchId]);
-        
-        if (matchedDogData && matchedDogData.length > 0) {
-          // Ensure we're not passing undefined to setMatchedDog
-          setMatchedDog(matchedDogData[0] || null);
-          setShowMatchModal(true);
-        } else {
-          setMatchedDog(null);
+      if (Array.isArray(matchedDogs) && matchedDogs.length > 0) {
+        const firstDog = matchedDogs[0];
+        if (firstDog) {
+          dogToSet = firstDog;
         }
       }
+      
+      // Now we're setting either a valid Dog or null
+      setMatchedDog(dogToSet);
     } catch (error) {
-      console.error('Error generating match:', error);
-      alert('Failed to generate a match. Please try again.');
+      setApiError('Failed to generate a match. Please try again.');
+      setMatchDialogOpen(false);
     } finally {
-      setLoading(false);
+      setMatchLoading(false);
     }
   };
 
-  const totalPages = Math.ceil(total / pageSize);
-
-  useEffect(() => {
-    if (apiError) {
-      console.log('API Error:', apiError);
+  // Add a function to handle random match generation
+  const handleRandomMatch = async () => {
+    setRandomMatchLoading(true);
+    setMatchDialogOpen(true);
+    
+    try {
+      // Get a random dog ID using our custom function
+      const randomDogId = await generateRandomMatch();
+      
+      // Fetch the dog details
+      const randomDogs = await fetchDogsByIds([randomDogId]);
+      
+      if (Array.isArray(randomDogs) && randomDogs.length > 0) {
+        const firstDog = randomDogs[0];
+        if (firstDog) {
+          setMatchedDog(firstDog);
+        } else {
+          setApiError('Failed to retrieve dog details. Please try again.');
+          setMatchDialogOpen(false);
+        }
+      } else {
+        setApiError('Failed to find a random match. Please try again.');
+        setMatchDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Random match error:', error);
+      setApiError('Failed to generate a random match. Please try again.');
+      setMatchDialogOpen(false);
+    } finally {
+      setRandomMatchLoading(false);
     }
-  }, [apiError]);
+  };
 
   return (
-    <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
-      {!apiAvailable && (
-        <div className="alert alert-warning" style={{ 
-          backgroundColor: '#fff3cd', 
-          color: '#856404', 
-          padding: '12px 16px', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          border: '1px solid #ffeeba',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 10 }}>
-            <path d="M12 9V11M12 15H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0378 2.66667 10.268 4L3.33978 16C2.56998 17.3333 3.53223 19 5.07183 19Z" stroke="#856404" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>The API service appears to be unavailable. Showing mock data for demonstration purposes.</span>
-        </div>
-      )}
-      
-      {apiError && (
-        <div style={{
-          backgroundColor: '#fff3cd',
-          color: '#856404',
-          padding: '12px 16px',
-          borderRadius: '4px',
-          marginBottom: '20px',
-          border: '1px solid #ffeeba'
-        }}>
-          <p style={{ margin: 0 }}>{apiError}</p>
-          {!isApiAvailable && (
-            <button 
-              onClick={async () => {
-                const available = await checkApiAvailability();
-                setIsApiAvailable(available);
-                if (available) {
-                  setApiError(null);
-                  // Reload dogs
-                  loadDogs();
+    <Container maxWidth="lg">
+      <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2 }}>
+        <Typography 
+          variant="h4" 
+          component="h1"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            color: theme.palette.primary.main,
+            fontWeight: 700
+          }}
+        >
+          <PetsIcon sx={{ fontSize: 32 }} />
+          Find Your Perfect Dog
+        </Typography>
+        
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ 
+            fontStyle: 'italic',
+            maxWidth: '400px',
+            textAlign: { xs: 'left', md: 'center' },
+            borderLeft: { xs: 'none', md: `4px solid ${theme.palette.primary.light}` },
+            pl: { xs: 0, md: 2 }
+          }}
+        >
+          {getRandomDogQuote()}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, md: 0 }, alignSelf: { xs: 'flex-end', md: 'center' } }}>
+          <Button
+            variant="outlined"
+            startIcon={<FavoriteIcon />}
+            onClick={() => navigate('/favorites')}
+            sx={{ borderRadius: 25 }}
+          >
+            View Favorites ({favorites.length})
+          </Button>
+          
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<ShuffleIcon />}
+              onClick={handleRandomMatch}
+              disabled={randomMatchLoading}
+              sx={{ 
+                borderRadius: 25,
+                bgcolor: theme.palette.info.main,
+                '&:hover': {
+                  bgcolor: theme.palette.info.dark,
                 }
               }}
-              style={{
-                backgroundColor: THEME.primary,
-                color: 'white',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '4px',
-                marginTop: '8px',
-                cursor: 'pointer'
-              }}
             >
-              Retry Connection
-            </button>
-          )}
-        </div>
+              {randomMatchLoading ? <CircularProgress size={24} color="inherit" /> : 'Random Match'}
+            </Button>
+            
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<FavoriteIcon />}
+              onClick={handleGenerateMatch}
+              disabled={favorites.length === 0 || matchLoading}
+              sx={{ borderRadius: 25 }}
+            >
+              {matchLoading ? <CircularProgress size={24} color="inherit" /> : 'Match from Favorites'}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+      
+      {apiError && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+        >
+          {apiError}
+        </Alert>
       )}
-
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: 20,
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
-        <h1 style={{ margin: 0, color: THEME.text, fontSize: '2rem' }}>Find Your Perfect Dog</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => navigate('/favorites')}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: THEME.secondary,
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontWeight: 500,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="white"/>
-            </svg>
-            Favorites ({favorites.length})
-          </button>
-          {favorites.length > 0 && (
-            <button
-              onClick={generateMatch}
-              disabled={loading}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: loading ? '#ccc' : THEME.accent,
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontWeight: 500,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 9l-9-7-9 7v11h18V9z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <path d="M9 22V12h6v10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Find Match
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="card" style={{ 
-        backgroundColor: THEME.cardBg,
-        borderRadius: 12,
-        padding: 24,
-        marginBottom: 24,
-        boxShadow: `0 4px 12px ${THEME.shadow}`
-      }}>
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 20
-        }}>
-          {/* Breed filter */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: THEME.text }}>
-              Breed
-            </label>
-            <div style={{ height: 42 }}>
+      
+      <Paper sx={{ mb: 3 }}>
+        <Filters
+          breeds={breeds}
+          selectedBreeds={selectedBreeds}
+          onSelectedBreedsChange={setSelectedBreeds}
+          zipCodes={zipCodes}
+          onZipChange={setZipCodes}
+          ageRange={ageRange}
+          onAgeChange={setAgeRange}
+        />
+        
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="sort-field-label">Sort By</InputLabel>
               <Select
-                isMulti
-                options={breeds.map(breed => ({ value: breed, label: breed }))}
-                value={selectedBreeds.map(breed => ({ value: breed, label: breed }))}
-                onChange={(selected) => {
-                  setSelectedBreeds(selected ? selected.map(option => option.value) : []);
-                  setPage(0); // Reset to first page on filter change
-                }}
-                placeholder="Select breeds..."
-                isDisabled={loading}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderColor: THEME.border,
-                    boxShadow: 'none',
-                    borderRadius: '6px',
-                    minHeight: '42px',
-                    height: '42px',
-                    '&:hover': {
-                      borderColor: THEME.primary,
-                    },
-                  }),
-                  valueContainer: (base) => ({
-                    ...base,
-                    padding: '2px 8px',
-                  }),
-                  input: (base) => ({
-                    ...base,
-                    margin: '0px',
-                  }),
-                  indicatorsContainer: (base) => ({
-                    ...base,
-                    height: '40px',
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: `${THEME.primary}20`,
-                    borderRadius: '4px',
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: THEME.primary,
-                    fontWeight: 500,
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: THEME.primary,
-                    '&:hover': {
-                      backgroundColor: THEME.primary,
-                      color: 'white',
-                    },
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    zIndex: 1000,
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isSelected 
-                      ? THEME.primary 
-                      : state.isFocused 
-                        ? `${THEME.primary}10` 
-                        : base.backgroundColor,
-                    '&:hover': {
-                      backgroundColor: state.isSelected 
-                        ? THEME.primary 
-                        : `${THEME.primary}10`,
-                    },
-                  }),
-                }}
-              />
-            </div>
-          </div>
-          
-          {/* ZIP Code filter */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: THEME.text }}>
-              ZIP Code
-            </label>
-            <input
-              type="text"
-              value={zipCode}
-              onChange={(e) => {
-                setZipCode(e.target.value);
-                setPage(0); // Reset to first page on filter change
-              }}
-              placeholder="Enter ZIP code"
-              disabled={loading}
-              style={{ 
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: `1px solid ${THEME.border}`,
-                height: 42,
-                fontSize: '15px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          
-          {/* Age Range filter */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: THEME.text }}>
-              Age Range
-            </label>
-            <div style={{ display: 'flex', gap: 8, height: 42 }}>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={ageMin !== undefined ? ageMin : ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseInt(e.target.value) : undefined;
-                  setAgeMin(value);
-                  setPage(0); // Reset to first page on filter change
-                }}
-                placeholder="Min"
-                style={{ 
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: 6,
-                  border: `1px solid ${THEME.border}`,
-                  fontSize: '15px',
-                  boxSizing: 'border-box',
-                  height: '100%'
-                }}
-              />
-              <span style={{ alignSelf: 'center', color: THEME.lightText }}>-</span>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={ageMax !== undefined ? ageMax : ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseInt(e.target.value) : undefined;
-                  setAgeMax(value);
-                  setPage(0); // Reset to first page on filter change
-                }}
-                placeholder="Max"
-                style={{ 
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: 6,
-                  border: `1px solid ${THEME.border}`,
-                  fontSize: '15px',
-                  boxSizing: 'border-box',
-                  height: '100%'
-                }}
-              />
-            </div>
-          </div>
-          
-          {/* Sort By filter */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: THEME.text }}>
-              Sort By
-            </label>
-            <select
-              value={sortField}
-              onChange={(e) => {
-                setSortField(e.target.value);
-                setPage(0); // Reset to first page on sort field change
-              }}
-              disabled={loading}
-              style={{ 
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: `1px solid ${THEME.border}`,
-                height: 42,
-                fontSize: '15px',
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${THEME.lightText.replace('#', '%23')}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 10px center',
-                backgroundSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            >
-              <option value="breed">Breed</option>
-              <option value="name">Name</option>
-              <option value="age">Age</option>
-              <option value="zip_code">Location</option>
-            </select>
-          </div>
-          
-          {/* Sort Order filter */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: THEME.text }}>
-              Sort Order
-            </label>
-            <select
-              value={sortOrder}
-              onChange={(e) => {
-                setSortOrder(e.target.value as 'asc' | 'desc');
-                setPage(0); // Reset to first page on sort change
-              }}
-              disabled={loading}
-              style={{ 
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: `1px solid ${THEME.border}`,
-                height: 42,
-                fontSize: '15px',
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${THEME.lightText.replace('#', '%23')}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 10px center',
-                backgroundSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Results grid */}
-      {!loading && dogs.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '20px',
-          marginTop: '20px'
-        }}>
-          {dogs.map((dog) => (
-            <DogCard 
-              key={dog.id} 
-              dog={dog} 
-              isFavorite={isFavorited(dog.id)} 
-              onToggleFavorite={toggleFavorite} 
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: 32,
-          marginBottom: 16
-        }}>
-          <button
-            onClick={() => setPage(Math.max(0, page - 1))}
-            disabled={page === 0 || loading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: page === 0 ? '#f5f5f5' : THEME.primary,
-              color: page === 0 ? '#999' : 'white',
-              border: 'none',
-              borderRadius: '8px 0 0 8px',
-              cursor: page === 0 ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              boxShadow: page === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            Previous
-          </button>
-          
-          <div style={{ 
-            padding: '10px 20px',
-            backgroundColor: THEME.cardBg,
-            border: `1px solid ${THEME.border}`,
-            borderLeft: 'none',
-            borderRight: 'none',
-            fontWeight: 500
-          }}>
-            Page {page + 1} of {totalPages}
-          </div>
-          
-          <button
-            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-            disabled={page >= totalPages - 1 || loading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: page >= totalPages - 1 ? '#f5f5f5' : THEME.primary,
-              color: page >= totalPages - 1 ? '#999' : 'white',
-              border: 'none',
-              borderRadius: '0 8px 8px 0',
-              cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              boxShadow: page >= totalPages - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      {/* Match Modal */}
-      {showMatchModal && matchedDog && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(5px)'
-        }}>
-          <div style={{
-            backgroundColor: THEME.cardBg,
-            borderRadius: 16,
-            padding: 32,
-            maxWidth: 500,
-            width: '90%',
-            boxShadow: `0 5px 20px rgba(0, 0, 0, 0.3)`,
-            position: 'relative'
-          }}>
-            <button 
-              onClick={() => setShowMatchModal(false)}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                background: 'none',
-                border: 'none',
-                fontSize: 24,
-                cursor: 'pointer',
-                color: THEME.lightText
-              }}
-            >
-              ×
-            </button>
-            
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <h2 style={{ color: THEME.primary, marginBottom: 5 }}>It's a Match!</h2>
-              <p style={{ color: THEME.lightText }}>We found the perfect dog for you</p>
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}>
-              <img 
-                src={matchedDog.img} 
-                alt={matchedDog.name}
-                style={{ 
-                  width: '100%', 
-                  maxHeight: 300, 
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                  marginBottom: 16
-                }}
-              />
-              
-              <h3 style={{ fontSize: 24, margin: '10px 0' }}>{matchedDog.name}</h3>
-              
-              <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-                width: '100%',
-                margin: '16px 0'
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold' }}>Breed:</p>
-                  <p style={{ margin: '4px 0 0 0', color: THEME.lightText }}>{matchedDog.breed}</p>
-                </div>
-                
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold' }}>Age:</p>
-                  <p style={{ margin: '4px 0 0 0', color: THEME.lightText }}>{matchedDog.age} years</p>
-                </div>
-                
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold' }}>Location:</p>
-                  <p style={{ margin: '4px 0 0 0', color: THEME.lightText }}>ZIP: {matchedDog.zip_code}</p>
-                </div>
-                
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold' }}>ID:</p>
-                  <p style={{ margin: '4px 0 0 0', color: THEME.lightText }}>{matchedDog.id}</p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => {
-                  if (!isFavorited(matchedDog.id)) {
-                    addFavorite(matchedDog.id);
-                  }
-                  setShowMatchModal(false);
-                }}
-                style={{
-                  padding: "12px 24px",
-                  backgroundColor: THEME.accent,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  marginTop: 16
-                }}
+                labelId="sort-field-label"
+                id="sort-field"
+                value={sortField}
+                label="Sort By"
+                onChange={(e) => setSortField(e.target.value)}
               >
-                {isFavorited(matchedDog.id) ? 'Already in Favorites' : 'Add to Favorites'}
-              </button>
-            </div>
-          </div>
-        </div>
+                <MenuItem value="breed">Breed</MenuItem>
+                <MenuItem value="name">Name</MenuItem>
+                <MenuItem value="age">Age</MenuItem>
+                <MenuItem value="zip_code">Location</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth size="small">
+              <InputLabel id="sort-direction-label">Direction</InputLabel>
+              <Select
+                labelId="sort-direction-label"
+                id="sort-direction"
+                value={sortDirection}
+                label="Direction"
+                onChange={(e) => setSortDirection(e.target.value)}
+              >
+                <MenuItem value="asc">Ascending</MenuItem>
+                <MenuItem value="desc">Descending</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button 
+              variant="contained" 
+              onClick={handleSearch}
+              disabled={loading}
+            >
+              Search
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+      
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {dogs.length > 0 ? (
+            <Box 
+              sx={{ 
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)'
+                },
+                gap: 3,
+                mt: 3
+              }}
+            >
+              {dogs.map(dog => (
+                <Box key={dog.id}>
+                  <DogCard 
+                    dog={dog}
+                    isFavorite={favorites.some(fav => fav.id === dog.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Box sx={{ 
+              textAlign: 'center', 
+              my: 8,
+              p: 4,
+              borderRadius: 4,
+              backgroundColor: 'rgba(255, 157, 110, 0.05)',
+              border: '1px dashed rgba(255, 157, 110, 0.3)'
+            }}>
+              <PetsIcon sx={{ fontSize: 60, color: 'rgba(255, 157, 110, 0.5)', mb: 2 }} />
+              <Typography variant="h6">No dogs found matching your criteria</Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                Try adjusting your filters or search for different breeds
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
+                {getRandomDogQuote()}
+              </Typography>
+            </Box>
+          )}
+          
+          <Box sx={{ textAlign: 'center', my: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              {getRandomDogQuote()}
+            </Typography>
+          </Box>
+
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+              <Pagination 
+                count={totalPages} 
+                page={currentPage} 
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+              />
+            </Box>
+          )}
+        </>
       )}
-    </div>
+      
+      <MatchedDogDialog
+        open={matchDialogOpen}
+        onClose={() => setMatchDialogOpen(false)}
+        matchedDog={matchedDog}
+        isFavorite={matchedDog ? favorites.some(fav => fav.id === matchedDog.id) : false}
+        onToggleFavorite={handleToggleFavorite}
+        matchType={randomMatchLoading ? "random" : "favorites"}
+      />
+      
+      {/* Floating action button for mobile */}
+      <Fab
+        color="primary"
+        sx={{ position: 'fixed', bottom: 16, right: 16, display: { md: 'none' } }}
+        onClick={() => navigate('/favorites')}
+      >
+        <FavoriteIcon />
+      </Fab>
+    </Container>
   );
 };

@@ -1,4 +1,4 @@
-import useFavorites from '../store/useFavorites'
+import { useFavorites } from '../store/useFavorites'
 
 interface FavoriteButtonProps {
   dogId: string
@@ -14,7 +14,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({ dogId, isFavorite }) =>
 
   return (
     <button onClick={toggle}>
-      {isFavorite ? '★ Unfavorite' : '☆ Favorite'}
+      {isFavorite ? '❤️ Unfavorite' : '🤍 Favorite'}
     </button>
   )
 }

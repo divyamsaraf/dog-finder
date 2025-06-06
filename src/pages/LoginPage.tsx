@@ -1,181 +1,146 @@
 import React, { useState } from 'react';
-import { THEME } from '../App';
+import { 
+  Container, 
+  Box, 
+  Typography, 
+  TextField, 
+  Button, 
+  Alert, 
+  CircularProgress 
+} from '@mui/material';
+import { useAuth } from '../hooks/useAuth';
+import PetsIcon from '@mui/icons-material/Pets';
+import { useTheme } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 
-interface LoginPageProps {
-  onLogin: () => void;
-}
-
-export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+export const LoginPage: React.FC = () => {
+  const theme = useTheme();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError(null);
+
     if (!name.trim() || !email.trim()) {
       setError('Please enter both name and email');
       return;
     }
-    
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch('https://frontend-take-home-service.fetch.com/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include', // Important for storing cookies
-        body: JSON.stringify({ name, email })
-      });
-      
-      if (response.ok) {
-        console.log('Login successful');
-        // Add a small delay to ensure cookies are properly set
-        setTimeout(() => {
-          onLogin();
-        }, 500);
+      const success = await login(name, email);
+      if (success) {
+        navigate('/');
       } else {
-        // Handle specific error codes
-        if (response.status === 401) {
-          setError('Invalid credentials. Please check your name and email.');
-        } else if (response.status === 429) {
-          setError('Too many login attempts. Please try again later.');
-        } else {
-          setError(`Login failed with status: ${response.status}. Please try again.`);
-        }
-        console.error('Login failed with status:', response.status);
+        setError('Login failed. Please check your credentials and try again.');
       }
     } catch (err) {
-      setError('Network error. Please check your connection and try again.');
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
+      setError(err instanceof Error ? err.message : 'Failed to login');
     }
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh',
-      padding: '20px'
-    }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '12px', 
-        padding: '32px', 
-        width: '100%', 
-        maxWidth: '400px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
-      }}>
-        <h1 style={{ 
-          color: THEME.primary, 
-          marginBottom: '24px', 
-          textAlign: 'center',
-          fontSize: '1.75rem'
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          p: 4,
+          borderRadius: 4,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+          backgroundColor: 'white',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '8px',
+            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+          }
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          mb: 3,
+          p: 2,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.primary.main,
+          color: 'white'
         }}>
-          Dog Finder
-        </h1>
-        
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div style={{ 
-              backgroundColor: '#ffebee', 
-              color: '#c62828', 
-              padding: '12px', 
-              borderRadius: '6px', 
-              marginBottom: '16px',
-              fontSize: '0.9rem'
-            }}>
-              {error}
-            </div>
-          )}
-          
-          <div style={{ marginBottom: '16px' }}>
-            <label 
-              htmlFor="name" 
-              style={{ 
-                display: 'block', 
-                marginBottom: '6px', 
-                color: THEME.text,
-                fontSize: '0.9rem',
-                fontWeight: 500
-              }}
-            >
-              Name
-            </label>
-            <input 
-              id="name"
-              type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              style={{ 
-                width: '100%', 
-                padding: '10px 12px', 
-                borderRadius: '6px', 
-                border: `1px solid ${THEME.border}`,
-                fontSize: '1rem'
-              }} 
-              placeholder="Enter your name"
-              disabled={loading}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '24px' }}>
-            <label 
-              htmlFor="email" 
-              style={{ 
-                display: 'block', 
-                marginBottom: '6px', 
-                color: THEME.text,
-                fontSize: '0.9rem',
-                fontWeight: 500
-              }}
-            >
-              Email
-            </label>
-            <input 
-              id="email"
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              style={{ 
-                width: '100%', 
-                padding: '10px 12px', 
-                borderRadius: '6px', 
-                border: `1px solid ${THEME.border}`,
-                fontSize: '1rem'
-              }} 
-              placeholder="Enter your email"
-              disabled={loading}
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              backgroundColor: THEME.primary, 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontSize: '1rem',
-              fontWeight: 500,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
-            }}
-            disabled={loading}
+          <PetsIcon sx={{ fontSize: 40 }} />
+        </Box>
+        <Typography component="h1" variant="h5" fontWeight="bold" textAlign="center">
+          Welcome to Fetch Dog Finder
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3, textAlign: 'center' }}>
+          Find your perfect canine companion
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3, textAlign: 'center', fontStyle: 'italic' }}>
+          "Dogs are not our whole life, but they make our lives whole." — Roger Caras
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="name"
+            label="Name"
+            name="name"
+            autoComplete="name"
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isLoading}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email Address"
+            name="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2, py: 1.5, borderRadius: 25, fontWeight: 'bold' }}
+            disabled={isLoading}
           >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-      </div>
-    </div>
+            {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+          </Button>
+        </Box>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mt: 3, 
+          opacity: 0.5 
+        }}>
+          <PetsIcon sx={{ fontSize: 16, transform: 'rotate(-30deg)', mr: 1 }} />
+          <PetsIcon sx={{ fontSize: 16, mr: 1 }} />
+          <PetsIcon sx={{ fontSize: 16, transform: 'rotate(30deg)' }} />
+        </Box>
+      </Box>
+    </Container>
   );
 };

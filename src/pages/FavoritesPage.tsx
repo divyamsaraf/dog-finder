@@ -1,152 +1,257 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DogCard, THEME } from '../App';
-import { Dog } from '../types';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Button, 
+  Alert, 
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip
+} from '@mui/material';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import PetsIcon from '@mui/icons-material/Pets';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import DogCard from '../components/domain/DogCard';
 import { useFavorites } from '../store/useFavorites';
-import { fetchDogsByIds } from '../services/api';
+import { generateMatch, fetchDogsByIds, generateRandomMatch } from '../services/api';
+import { Dog } from '../types';
+import { useTheme } from '@mui/material/styles';
+import MatchedDogDialog from '../components/domain/MatchedDogDialog';
 
 export const FavoritesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { favorites, removeFavorite, isFavorited } = useFavorites();
-  const [favoriteDogs, setFavoriteDogs] = useState<Dog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { favorites, removeFavorite, clearFavorites, addFavorite } = useFavorites();
+  const theme = useTheme();
+  
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [randomMatchLoading, setRandomMatchLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadFavoriteDogs() {
-      if (favorites.length === 0) {
-        setFavoriteDogs([]);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        const dogs = await fetchDogsByIds(favorites);
-        setFavoriteDogs(dogs);
-      } catch (error) {
-        console.error('Error loading favorite dogs:', error);
-        
-        // Check if it's an authentication error
-        if (error instanceof Error && error.message.includes('401')) {
-          localStorage.removeItem("dog_finder_auth");
-          navigate('/login');
-        } else {
-          // Show a user-friendly error message
-          alert('Unable to fetch your favorite dogs. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
-      }
+  const handleToggleFavorite = (dog: Dog) => {
+    removeFavorite(dog.id);
+  };
+
+  const handleGenerateMatch = async () => {
+    if (favorites.length === 0) {
+      setError('Please add some dogs to your favorites first');
+      return;
     }
     
-    loadFavoriteDogs();
-  }, [favorites, navigate]);
+    setMatchLoading(true);
+    setError(null);
+    
+    try {
+      const matchId = await generateMatch(favorites.map(dog => dog.id));
+      const matchedDogs = await fetchDogsByIds([matchId]);
+      if (matchedDogs.length > 0) {
+        setMatchedDog(matchedDogs[0] || null);
+        setMatchDialogOpen(true);
+      }
+    } catch (error) {
+      setError('Failed to generate a match. Please try again.');
+    } finally {
+      setMatchLoading(false);
+    }
+  };
 
-  const toggleFavorite = (dogId: string) => {
-    removeFavorite(dogId);
+  const handleRandomMatch = async () => {
+    setRandomMatchLoading(true);
+    setError(null);
+    
+    try {
+      // Get a random dog ID using our custom function
+      const randomDogId = await generateRandomMatch();
+      
+      // Fetch the dog details
+      const randomDogs = await fetchDogsByIds([randomDogId]);
+      
+      if (Array.isArray(randomDogs) && randomDogs.length > 0) {
+        const firstDog = randomDogs[0];
+        if (firstDog) {
+          setMatchedDog(firstDog);
+          setMatchDialogOpen(true);
+        } else {
+          setError('Failed to retrieve dog details. Please try again.');
+        }
+      } else {
+        setError('Failed to find a random match. Please try again.');
+      }
+    } catch (error) {
+      console.error('Random match error:', error);
+      setError('Failed to generate a random match. Please try again.');
+    } finally {
+      setRandomMatchLoading(false);
+    }
+  };
+
+  const handleClearFavorites = () => {
+    clearFavorites();
+    setClearConfirmOpen(false);
   };
 
   return (
-    <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: 24,
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
-        <h1 style={{ margin: 0, color: THEME.text, fontSize: '2rem' }}>Your Favorite Dogs</h1>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: THEME.primary,
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontWeight: 500,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            transition: 'all 0.2s ease'
+    <Container maxWidth="lg">
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Typography 
+          variant="h4" 
+          component="h1"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            color: theme.palette.secondary.main,
+            fontWeight: 700
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Back to Search
-        </button>
-      </div>
-
-      {loading ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 0',
-          backgroundColor: THEME.cardBg,
-          borderRadius: 12,
-          boxShadow: `0 4px 12px ${THEME.shadow}`
-        }}>
-          <div style={{ marginBottom: "20px" }}>
-            <svg width="50" height="50" viewBox="0 0 50 50">
-              <path
-                fill={THEME.primary}
-                d="M25,5A20.14,20.14,0,0,1,45,22.88a2.51,2.51,0,0,0,2.49,2.26h0A2.52,2.52,0,0,0,50,22.33a25.14,25.14,0,0,0-50,0,2.52,2.52,0,0,0,2.5,2.81h0A2.51,2.51,0,0,0,5,22.88,20.14,20.14,0,0,1,25,5Z"
+          <FavoriteIcon sx={{ fontSize: 32 }} />
+          Your Favorite Dogs
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          {favorites.length > 0 && (
+            <Tooltip title="Clear all favorites">
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteSweepIcon />}
+                onClick={() => setClearConfirmOpen(true)}
+                sx={{ borderRadius: 25 }}
               >
-                <animateTransform
-                  attributeName="transform"
-                  type="rotate"
-                  from="0 25 25"
-                  to="360 25 25"
-                  dur="1s"
-                  repeatCount="indefinite"
-                />
-              </path>
-            </svg>
-          </div>
-          <p style={{ color: THEME.lightText, fontSize: 16 }}>Loading your favorites...</p>
-        </div>
-      ) : favoriteDogs.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 0',
-          backgroundColor: THEME.cardBg,
-          borderRadius: 12,
-          boxShadow: `0 4px 12px ${THEME.shadow}`
-        }}>
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: 16, opacity: 0.6 }}>
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke={THEME.lightText} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <p style={{ fontSize: 16, color: THEME.lightText }}>You haven't added any favorite dogs yet.</p>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: THEME.primary,
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              marginTop: 16,
-              fontWeight: 500
+                Clear All
+              </Button>
+            </Tooltip>
+          )}
+          
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<ShuffleIcon />}
+            onClick={handleRandomMatch}
+            disabled={randomMatchLoading}
+            sx={{ 
+              borderRadius: 25,
+              bgcolor: theme.palette.info.main,
+              '&:hover': {
+                bgcolor: theme.palette.info.dark,
+              }
             }}
           >
-            Find Dogs
-          </button>
-        </div>
-      ) : (
-        <div className="dog-grid">
-          {favoriteDogs.map((dog) => (
-            <DogCard 
-              key={dog.id} 
-              dog={dog} 
-              isFavorite={isFavorited(dog.id)} 
-              onToggleFavorite={toggleFavorite} 
-            />
-          ))}
-        </div>
+            {randomMatchLoading ? <CircularProgress size={24} color="inherit" /> : 'Random Match'}
+          </Button>
+          
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<ShuffleIcon />}
+            onClick={handleGenerateMatch}
+            disabled={favorites.length === 0 || matchLoading}
+            sx={{ borderRadius: 25 }}
+          >
+            {matchLoading ? <CircularProgress size={24} color="inherit" /> : 'Match from Favorites'}
+          </Button>
+        </Box>
+      </Box>
+      
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontStyle: 'italic' }}>
+        "Until one has loved an animal, a part of one's soul remains unawakened." — Anatole France
+      </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
       )}
-    </div>
+      
+      {favorites.length > 0 ? (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', margin: -1.5 }}>
+          {favorites.map(dog => (
+            <Box 
+              key={dog.id} 
+              sx={{ 
+                width: { xs: '100%', sm: '50%', md: '33.33%', lg: '25%' },
+                padding: 1.5 
+              }}
+            >
+              <DogCard 
+                dog={dog}
+                isFavorite={true}
+                onToggleFavorite={handleToggleFavorite}
+              />
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Box sx={{ 
+          textAlign: 'center', 
+          my: 8,
+          p: 4,
+          borderRadius: 4,
+          backgroundColor: 'rgba(255, 157, 110, 0.05)',
+          border: '1px dashed rgba(255, 157, 110, 0.3)'
+        }}>
+          <PetsIcon sx={{ fontSize: 60, color: 'rgba(255, 157, 110, 0.5)', mb: 2 }} />
+          <Typography variant="h6">No favorites yet</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+            Start adding dogs to your favorites from the search page
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
+            "Dogs do speak, but only to those who know how to listen." — Orhan Pamuk
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => navigate('/')}
+            sx={{ mt: 3, borderRadius: 25 }}
+          >
+            Search Dogs
+          </Button>
+        </Box>
+      )}
+      
+      {/* Match Dialog - Enhanced UI */}
+      <MatchedDogDialog
+        open={matchDialogOpen}
+        onClose={() => setMatchDialogOpen(false)}
+        matchedDog={matchedDog}
+        isFavorite={matchedDog ? favorites.some(f => f.id === matchedDog.id) : false}
+        onToggleFavorite={(dog) => {
+          if (!favorites.some(f => f.id === dog.id)) {
+            addFavorite(dog);
+          }
+        }}
+        matchType={randomMatchLoading ? "random" : "favorites"}
+      />
+      
+      {/* Clear Favorites Confirmation Dialog */}
+      <Dialog
+        open={clearConfirmOpen}
+        onClose={() => setClearConfirmOpen(false)}
+      >
+        <DialogTitle>Clear All Favorites?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove all {favorites.length} dogs from your favorites? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleClearFavorites} color="error" variant="contained">
+            Clear All
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
+
+// Add a default export
+export default FavoritesPage;

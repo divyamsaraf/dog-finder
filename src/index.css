@@ -1,42 +1,96 @@
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
 
-  color-scheme: light;
-  color: #213547;
-  background-color: #f9f9f9;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333333;
+  background-color: #F9F7F3;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #f9f9f9;
-  cursor: pointer;
-  transition: border-color 0.25s;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
 }
 
-button:hover {
-  border-color: #646cff;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+::-webkit-scrollbar-thumb {
+  background: #FF9D6E;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e88c5e;
+}
+
+/* Animations */
+@keyframes wag {
+  0% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+  100% { transform: rotate(-5deg); }
+}
+
+.wag-animation:hover {
+  animation: wag 0.5s infinite;
+  transform-origin: center bottom;
+}
+
+/* Paw print loading animation */
+.paw-loading {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.paw-loading::before,
+.paw-loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: #FF9D6E;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.paw-loading::before {
+  animation: paw-print 2s infinite;
+}
+
+.paw-loading::after {
+  animation: paw-print 2s 0.5s infinite;
+}
+
+@keyframes paw-print {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(50px, 50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+}
+
+/* Add this to your existing CSS */
+.paw-pattern-bg {
+  background-color: #F9F7F3;
+  background-image: radial-gradient(#E6E6E6 15%, transparent 15%),
+                    radial-gradient(#E6E6E6 15%, transparent 15%);
+  background-size: 60px 60px;
+  background-position: 0 0, 30px 30px;
 }
