@@ -20,6 +20,9 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import { Dog } from '../../types';
 import { getRandomDogQuote } from '../../utils/dogQuotes';
 
+/**
+ * Props for the MatchedDogDialog component
+ */
 interface MatchedDogDialogProps {
   open: boolean;
   onClose: () => void;
@@ -29,6 +32,12 @@ interface MatchedDogDialogProps {
   matchType?: "random" | "favorites";
 }
 
+/**
+ * MatchedDogDialog displays a modal with details about a matched dog
+ * 
+ * Shows comprehensive information about a dog that was matched either
+ * randomly or based on user favorites. Allows adding/removing from favorites.
+ */
 const MatchedDogDialog: React.FC<MatchedDogDialogProps> = ({ 
   open, 
   onClose, 

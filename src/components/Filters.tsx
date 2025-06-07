@@ -5,6 +5,7 @@ import PetsIcon from '@mui/icons-material/Pets';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CakeIcon from '@mui/icons-material/Cake';
 
+// Props for the Filters component
 interface FiltersProps {
   breeds: string[];
   selectedBreeds: string[];
@@ -14,6 +15,18 @@ interface FiltersProps {
   ageRange: [number, number];
   onAgeChange: (ageRange: [number, number]) => void;
 }
+
+
+/**
+ * Filters component for filtering dog search results
+ * 
+ * Provides controls for:
+ * - Selecting dog breeds
+ * - Setting age range
+ * - Entering ZIP codes
+ * - Searching with filters
+ * - Resetting filters
+ */
 
 const Filters: React.FC<FiltersProps> = ({
   breeds,
@@ -88,7 +101,7 @@ const Filters: React.FC<FiltersProps> = ({
             }}
           />
         </Box>
-        
+
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <LocationOnIcon sx={{ mr: 1, color: 'secondary.main', fontSize: 20 }} />

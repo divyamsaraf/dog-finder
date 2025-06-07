@@ -7,7 +7,12 @@ const api = axios.create({
   withCredentials: true // Important for cookie-based authentication
 });
 
-// Authentication
+/**
+ * Authenticates a user with the API
+ * @param name - User's name
+ * @param email - User's email
+ * @returns Promise resolving to authentication success status
+ */
 export const login = async (name: string, email: string): Promise<boolean> => {
   try {
     const response = await api.post('/auth/login', { name, email });
@@ -17,6 +22,11 @@ export const login = async (name: string, email: string): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Logs out the current user
+ * @returns Promise resolving to logout success status
+ */
 
 export const logout = async (): Promise<boolean> => {
   try {
@@ -46,8 +56,11 @@ export const checkAuth = async (): Promise<boolean> => {
   }
 };
 
-// Dog data
-export const fetchBreeds = async (): Promise<string[]> => {
+/**
+ * Fetches all available dog breeds
+ * @returns Promise resolving to array of breed strings
+ */
+  export const fetchBreeds = async (): Promise<string[]> => {
   try {
     const response = await api.get('/dogs/breeds');
     return response.data;
@@ -56,6 +69,13 @@ export const fetchBreeds = async (): Promise<string[]> => {
     throw error;
   }
 };
+
+
+/**
+ * Searches for dogs based on provided parameters
+ * @param params - Search parameters including filters, pagination, and sorting
+ * @returns Promise resolving to search results with dog IDs and pagination info
+ */
 
 export const searchDogs = async (params: SearchParams, page = 1): Promise<{ resultIds: string[], total: number, next?: string, prev?: string }> => {
   try {
@@ -116,6 +136,12 @@ export const searchDogs = async (params: SearchParams, page = 1): Promise<{ resu
   }
 };
 
+/**
+ * Fetches detailed information for dogs by their IDs
+ * @param ids - Array of dog IDs to fetch
+ * @returns Promise resolving to array of Dog objects
+ */
+
 export const fetchDogsByIds = async (ids: string[]): Promise<Dog[]> => {
   try {
     const response = await api.post('/dogs', ids);
@@ -126,6 +152,12 @@ export const fetchDogsByIds = async (ids: string[]): Promise<Dog[]> => {
   }
 };
 
+/**
+ * Generates a match based on favorited dog IDs
+ * @param favoriteIds - Array of favorited dog IDs
+ * @returns Promise resolving to matched dog ID
+ */
+
 export const generateMatch = async (dogIds: string[]): Promise<string> => {
   try {
     const response = await api.post('/dogs/match', dogIds);
@@ -135,6 +167,11 @@ export const generateMatch = async (dogIds: string[]): Promise<string> => {
     throw error;
   }
 };
+
+/**
+ * Generates a random match by selecting a random dog
+ * @returns Promise resolving to a randomly selected Dog object
+ */
 
 export const generateRandomMatch = async (): Promise<string> => {
   try {

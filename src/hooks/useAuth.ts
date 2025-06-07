@@ -2,6 +2,16 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { login as apiLogin, logout as apiLogout, checkAuth } from '../services/api';
 import { useLocation } from 'react-router-dom';
 
+
+/**
+ * Custom hook for managing authentication state
+ * 
+ * Provides:
+ * - Authentication state
+ * - Login and logout functions
+ * - Loading state during authentication operations
+ */
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -39,6 +49,9 @@ export function useAuth() {
     }
   }, [checkAuthentication, location.pathname]);
 
+
+   // Authenticate user with the API
+
   const login = async (name: string, email: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -54,6 +67,8 @@ export function useAuth() {
       return false;
     }
   };
+
+  // Log out the current user
 
   const logout = async (): Promise<void> => {
     setIsLoading(true);

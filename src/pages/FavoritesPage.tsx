@@ -24,6 +24,16 @@ import { Dog } from '../types';
 import { useTheme } from '@mui/material/styles';
 import MatchedDogDialog from '../components/domain/MatchedDogDialog';
 
+/**
+ * FavoritesPage displays all dogs that the user has favorited
+ * 
+ * Features:
+ * - View all favorited dogs
+ * - Generate a match based on favorites
+ * - Generate a random match
+ * - Remove dogs from favorites
+ * - Clear all favorites
+ */
 export const FavoritesPage: React.FC = () => {
   const navigate = useNavigate();
   const { favorites, removeFavorite, clearFavorites, addFavorite } = useFavorites();
@@ -36,10 +46,14 @@ export const FavoritesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
+
+  // Handles toggling a dog's favorite status (removes from favorites)
+
   const handleToggleFavorite = (dog: Dog) => {
     removeFavorite(dog.id);
   };
 
+  // Generates a match based on user's favorites
   const handleGenerateMatch = async () => {
     if (favorites.length === 0) {
       setError('Please add some dogs to your favorites first');
@@ -62,7 +76,7 @@ export const FavoritesPage: React.FC = () => {
       setMatchLoading(false);
     }
   };
-
+  // Generates a random match regardless of favorites
   const handleRandomMatch = async () => {
     setRandomMatchLoading(true);
     setError(null);
@@ -92,6 +106,8 @@ export const FavoritesPage: React.FC = () => {
       setRandomMatchLoading(false);
     }
   };
+
+  // Clears all favorites after confirmation
 
   const handleClearFavorites = () => {
     clearFavorites();

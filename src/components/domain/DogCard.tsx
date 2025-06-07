@@ -8,10 +8,18 @@ import CakeIcon from '@mui/icons-material/Cake';
 import { Dog } from '../../types';
 import { getRandomDogQuote } from '../../utils/dogQuotes';
 
-// At the top of your file, add a type assertion function
+/**
+ * Type assertion utility to handle undefined image URLs
+ * @param value - The string value to check
+ * @param fallback - Fallback value if undefined
+ * @returns A guaranteed string value
+ */
 function assertString(value: string | undefined, fallback: string): string {
   return value !== undefined ? value : fallback;
 }
+
+
+// Props for the DogCard component
 
 interface DogCardProps {
   dog: Dog;
@@ -19,11 +27,18 @@ interface DogCardProps {
   onToggleFavorite: (dog: Dog) => void;
 }
 
+/**
+ * DogCard component displays information about a dog with favorite functionality
+ * 
+ * Displays dog image, name, breed, age, location, and favorite status
+ * Allows toggling favorite status
+ */
 const DogCard: React.FC<DogCardProps> = ({ dog, isFavorite, onToggleFavorite }) => {
   // Use the assertion function to guarantee a string
   const imageUrl = assertString(dog.img, `https://placedog.net/500/280?id=${dog.id}`);
   
-  // Function to get a playful description based on age
+
+  // Returns a descriptive age category based on dog's age
   const getAgeDescription = (age: number): string => {
     if (age < 1) return 'Puppy';
     if (age < 3) return 'Young';
