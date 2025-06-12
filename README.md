@@ -17,7 +17,6 @@ A modern web application for finding adoptable dogs, built with React, TypeScrip
 - **Match Generation**: Get matched with a dog based on your favorites
 - **Random Match**: Discover a random dog if you're not sure what you're looking for
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **API Status Monitoring**: Check the availability of the backend service
 
 ## 🛠️ Tech Stack
 
@@ -39,7 +38,7 @@ fetch-dog-finder/
 │   ├── components/       # Reusable UI components
 │   │   ├── domain/       # Domain-specific components (DogCard, MatchedDogDialog)
 │   │   └── ui/           # Generic UI components
-│   ├── pages/            # Page components (Login, Search, Favorites, ApiStatus)
+│   ├── pages/            # Page components (Login, Search, Favorites)
 │   ├── services/         # API service functions
 │   ├── store/            # Zustand state management
 │   ├── types/            # TypeScript type definitions
@@ -119,7 +118,6 @@ The application integrates with the Fetch API service:
 - **LoginPage**: User authentication with name and email
 - **SearchPage**: Main search interface with filters, sorting, and pagination
 - **FavoritesPage**: View and manage favorite dogs
-- **ApiStatusPage**: Check API service status
 
 ### Components
 - **DogCard**: Display dog information with favorite toggle

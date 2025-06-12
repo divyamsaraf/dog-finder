@@ -5,7 +5,6 @@ import { useLocation } from 'react-router-dom';
 
 /**
  * Custom hook for managing authentication state
- * 
  * Provides:
  * - Authentication state
  * - Login and logout functions

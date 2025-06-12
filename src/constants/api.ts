@@ -4,7 +4,7 @@ export const API_ENDPOINTS = {
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
   BREEDS: '/dogs/breeds',
-  // This is the correct endpoint for search
+
   SEARCH: '/dogs/search',
   DOGS: '/dogs',
   MATCH: '/dogs/match',
