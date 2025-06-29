@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import UnusedFiles from 'vite-plugin-unused-files';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,7 +13,12 @@ const __dirname = dirname(__filename);
 const isDev = process.env.NODE_ENV !== 'production';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(),
+    // @ts-ignore
+    UnusedFiles({
+      include: ['src/**/*.{ts,tsx,js,jsx,css,svg,json}'],
+    }),
+  ],
   server: {
     // Only use HTTPS in development
     ...(isDev ? {
