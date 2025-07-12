@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
               textShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
-            Fetch Dog Finder
+            Dog Finder
           </Typography>
         </Box>
         
